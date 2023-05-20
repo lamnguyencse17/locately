@@ -1,0 +1,6 @@
+
+locately-server/target/
+
+locately-server/.env
+
+locately-server/migrations/.keep
