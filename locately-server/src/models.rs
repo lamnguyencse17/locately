@@ -1,9 +1,11 @@
 use diesel::prelude::*;
+use serde::Serialize;
 
-#[derive(Queryable)]
+pub mod user;
+#[derive(Queryable, Serialize)]
 pub struct User {
     pub id: String,
     pub name: String,
     pub email: String,
-    pub hashed_password: bool,
+    pub hashed_password: String,
 }

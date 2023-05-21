@@ -3,8 +3,11 @@ use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
 
+pub mod auth;
+pub mod db;
 pub mod models;
 pub mod schema;
+pub mod scopes;
 
 pub fn establish_connection() -> MysqlConnection {
     dotenv().ok();
