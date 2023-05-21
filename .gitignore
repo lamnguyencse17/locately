@@ -4,3 +4,7 @@ locately-server/target/
 locately-server/.env
 
 locately-server/migrations/.keep
+
+locately-app/.yarn/cache/
+
+locately-app/.yarn/
