@@ -1,7 +1,6 @@
-use crate::{auth, models::user::NewUser};
-// use crate::models::user::NewUser;
 use crate::models::User;
-use crate::schema::users;
+use crate::schema::users::{self, email};
+use crate::{auth, models::user::NewUser};
 use diesel::{mysql::MysqlConnection, prelude::*, result::Error};
 use nanoid::nanoid;
 
@@ -13,7 +12,7 @@ pub enum CreateUserError {
 pub fn create_user(
     conn: &mut MysqlConnection,
     name: &str,
-    email: &str,
+    user_email: &str,
     clear_password: &str,
 ) -> Result<User, CreateUserError> {
     let id = nanoid!(36);
@@ -22,7 +21,7 @@ pub fn create_user(
     let new_user = NewUser {
         id: id.as_str(),
         name,
-        email,
+        email: user_email,
         hashed_password: hashed_password.as_str(),
     };
     diesel::insert_into(users::table)
@@ -35,4 +34,9 @@ pub fn create_user(
         .first(conn)
         .map_err(|e| CreateUserError::DieselError(e))?;
     return Ok(created_user);
+}
+
+pub fn get_user_by_email(conn: &mut MysqlConnection, user_email: &str) -> Result<User, Error> {
+    let user = users::table.filter(email.eq(user_email)).first(conn)?;
+    return Ok(user);
 }

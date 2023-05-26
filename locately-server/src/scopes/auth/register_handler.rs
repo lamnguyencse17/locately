@@ -1,15 +1,8 @@
-use std::fmt::Display;
-
-use actix_web::{
-    error,
-    http::{header::ContentType, StatusCode},
-    post, web, HttpResponse, Responder, Result,
-};
-use derive_more::{Display, Error};
+use actix_web::{post, web, Responder, Result};
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError as ValidatorError, ValidationErrors};
+use validator::{Validate, ValidationError as ValidatorError};
 
-use crate::{db::user_db::create_user, establish_connection};
+use crate::{db::user_db::create_user, establish_connection, ErrorEnum, ErrorResponse};
 
 #[derive(Debug, Validate, Deserialize)]
 struct RegisterRequest {
@@ -26,17 +19,11 @@ struct RegisterResponse {
     username: String,
 }
 
-#[derive(Serialize, Debug, Error)]
-struct UserError {
-    message: String,
-    detail: RegisterUserError,
-}
-
 #[post("/register")]
-async fn register(req_body: web::Json<RegisterRequest>) -> Result<impl Responder, UserError> {
-    req_body.validate().map_err(|e| UserError {
+async fn register(req_body: web::Json<RegisterRequest>) -> Result<impl Responder, ErrorResponse> {
+    req_body.validate().map_err(|e| ErrorResponse {
         message: "Validation failed".to_owned(),
-        detail: RegisterUserError::ValidationError(e),
+        detail: ErrorEnum::ValidationError(e),
     })?;
     let mut conn = establish_connection();
     let user = create_user(
@@ -45,40 +32,11 @@ async fn register(req_body: web::Json<RegisterRequest>) -> Result<impl Responder
         &req_body.email,
         &req_body.password,
     )
-    .map_err(|e| UserError {
+    .map_err(|e| ErrorResponse {
         message: "Failed to create user".to_owned(),
-        detail: RegisterUserError::InternalError,
+        detail: ErrorEnum::InternalError,
     })?;
     Ok(web::Json(user))
-}
-
-// === Error Handling ===
-
-#[derive(Serialize, Debug, Display, Error)]
-enum RegisterUserError {
-    InternalError,
-    ValidationError(ValidationErrors),
-}
-
-impl Display for UserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_json::to_string(&self).unwrap())
-    }
-}
-
-impl error::ResponseError for UserError {
-    fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code())
-            .insert_header(ContentType::json())
-            .body(self.to_string())
-    }
-
-    fn status_code(&self) -> StatusCode {
-        match self.detail {
-            RegisterUserError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            RegisterUserError::ValidationError(_) => StatusCode::BAD_REQUEST,
-        }
-    }
 }
 
 fn validate_password_strength(password: &str) -> Result<(), ValidatorError> {
