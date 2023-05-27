@@ -39,10 +39,16 @@ async fn register(
     .map_err(|_| ErrorResponse {
         message: "Failed to create user".to_owned(),
         detail: ErrorEnum::InternalError,
-    })?
-    .map_err(|_| ErrorResponse {
-        message: "Failed to create user".to_owned(),
-        detail: ErrorEnum::InternalError,
     })?;
+    let user = match user {
+        Ok(user) => user,
+        Err(_) => {
+            return Err(ErrorResponse {
+                message: "Email or password is invalid".to_owned(),
+                detail: ErrorEnum::AuthorizationError,
+            });
+        }
+    };
+
     Ok(web::Json(user))
 }
