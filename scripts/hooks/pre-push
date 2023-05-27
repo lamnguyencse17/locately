@@ -1,0 +1,5 @@
+#!/bin/bash
+
+(cd ./locately-server && cargo check)
+
+exit 0
