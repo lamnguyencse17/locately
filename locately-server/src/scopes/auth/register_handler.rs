@@ -2,7 +2,7 @@ use actix_web::{post, web, Responder, Result};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError as ValidatorError};
 
-use crate::{db::user_db::create_user, establish_connection, ErrorEnum, ErrorResponse};
+use crate::{db::user_db::create_user, DbPool, ErrorEnum, ErrorResponse};
 
 #[derive(Debug, Validate, Deserialize)]
 struct RegisterRequest {
@@ -20,19 +20,30 @@ struct RegisterResponse {
 }
 
 #[post("/register")]
-async fn register(req_body: web::Json<RegisterRequest>) -> Result<impl Responder, ErrorResponse> {
+async fn register(
+    pool: web::Data<DbPool>,
+    req_body: web::Json<RegisterRequest>,
+) -> Result<impl Responder, ErrorResponse> {
     req_body.validate().map_err(|e| ErrorResponse {
         message: "Validation failed".to_owned(),
         detail: ErrorEnum::ValidationError(e),
     })?;
-    let mut conn = establish_connection();
-    let user = create_user(
-        &mut conn,
-        &req_body.name,
-        &req_body.email,
-        &req_body.password,
-    )
-    .map_err(|e| ErrorResponse {
+    let user = web::block(move || {
+        let mut conn = pool.get().expect("couldn't get db connection from pool");
+
+        create_user(
+            &mut conn,
+            &req_body.name,
+            &req_body.email,
+            &req_body.password,
+        )
+    })
+    .await
+    .map_err(|_| ErrorResponse {
+        message: "Failed to create user".to_owned(),
+        detail: ErrorEnum::InternalError,
+    })?
+    .map_err(|_| ErrorResponse {
         message: "Failed to create user".to_owned(),
         detail: ErrorEnum::InternalError,
     })?;

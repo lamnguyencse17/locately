@@ -3,10 +3,8 @@ use actix_web::http::StatusCode;
 use actix_web::{error, HttpResponse};
 use derive_more::{Display, Error};
 use diesel::mysql::MysqlConnection;
-use diesel::prelude::*;
-use dotenvy::dotenv;
+use diesel::r2d2;
 use serde::Serialize;
-use std::env;
 use std::fmt::Display;
 use validator::ValidationErrors;
 
@@ -16,13 +14,7 @@ pub mod models;
 pub mod schema;
 pub mod scopes;
 
-pub fn establish_connection() -> MysqlConnection {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    MysqlConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
-}
+pub type DbPool = r2d2::Pool<r2d2::ConnectionManager<MysqlConnection>>;
 
 #[derive(Serialize, Debug, Display, Error)]
 pub enum ErrorEnum {
