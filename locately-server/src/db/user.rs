@@ -17,7 +17,7 @@ pub fn create_user(
 ) -> Result<User, CreateUserError> {
     let id = nanoid!(36);
     let hashed_password =
-        auth::hash_password(clear_password).map_err(|e| CreateUserError::PasswordError(e))?;
+        auth::hash_password(clear_password).map_err(CreateUserError::PasswordError)?;
     let new_user = NewUser {
         id: id.as_str(),
         name,
@@ -27,16 +27,16 @@ pub fn create_user(
     diesel::insert_into(users::table)
         .values(&new_user)
         .execute(conn)
-        .map_err(|e| CreateUserError::DieselError(e))?;
+        .map_err(CreateUserError::DieselError)?;
 
     let created_user = users::table
         .filter(users::id.eq(id))
         .first(conn)
-        .map_err(|e| CreateUserError::DieselError(e))?;
-    return Ok(created_user);
+        .map_err(CreateUserError::DieselError)?;
+    Ok(created_user)
 }
 
 pub fn get_user_by_email(conn: &mut MysqlConnection, user_email: &str) -> Result<User, Error> {
     let user = users::table.filter(email.eq(user_email)).first(conn)?;
-    return Ok(user);
+    Ok(user)
 }
