@@ -1,8 +1,10 @@
 use actix_web::{post, web, Responder, Result};
-use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError as ValidatorError};
+use serde::Deserialize;
+use validator::Validate;
 
-use crate::{db::user_db::create_user, DbPool, ErrorEnum, ErrorResponse};
+use crate::{
+    auth::validate_password_strength, db::user_db::create_user, DbPool, ErrorEnum, ErrorResponse,
+};
 
 #[derive(Debug, Validate, Deserialize)]
 struct RegisterRequest {
@@ -12,11 +14,6 @@ struct RegisterRequest {
     pub email: String,
     #[validate(length(min = 8), custom = "validate_password_strength")]
     pub password: String,
-}
-
-#[derive(Serialize)]
-struct RegisterResponse {
-    username: String,
 }
 
 #[post("/register")]
@@ -48,18 +45,4 @@ async fn register(
         detail: ErrorEnum::InternalError,
     })?;
     Ok(web::Json(user))
-}
-
-fn validate_password_strength(password: &str) -> Result<(), ValidatorError> {
-    let contains_uppercase = password.chars().any(|c| c.is_ascii_uppercase());
-    let contains_lowercase = password.chars().any(|c| c.is_ascii_lowercase());
-    let contains_digit = password.chars().any(|c| c.is_ascii_digit());
-
-    if contains_uppercase && contains_lowercase && contains_digit {
-        Ok(())
-    } else {
-        Err(ValidatorError::new(
-            "Password does not meet the required strength criteria.",
-        ))
-    }
 }

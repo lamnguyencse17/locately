@@ -30,17 +30,24 @@ async fn login(
     .map_err(|_| ErrorResponse {
         message: "Failed to authenticate user".to_owned(),
         detail: ErrorEnum::InternalError,
-    })?
-    .map_err(|_| ErrorResponse {
-        message: "Email or password is invalid".to_owned(),
-        detail: ErrorEnum::AuthorizationError,
     })?;
-    let password_matched = is_password_matched(&req_body.password, &found_user.hashed_password);
+
+    let user = match found_user {
+        Ok(user) => user,
+        Err(_) => {
+            return Err(ErrorResponse {
+                message: "Email or password is invalid".to_owned(),
+                detail: ErrorEnum::AuthorizationError,
+            });
+        }
+    };
+    let password_matched = is_password_matched(&req_body.password, &user.hashed_password);
     if !password_matched {
         return Err(ErrorResponse {
             message: "Email or password is invalid".to_owned(),
             detail: ErrorEnum::AuthorizationError,
         });
     }
-    Ok(web::Json(()))
+
+    Ok(web::Json(user))
 }
